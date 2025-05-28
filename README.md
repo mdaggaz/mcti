@@ -13,7 +13,7 @@ EDI = 0x00401069 (Zieladresse)
 ESI = 0x0040106A (Quelladresse oder nächste Instruktion)
 ECX = 0x017C (380 dezimal)
 
-4.Wir haben weiterhin den Befehl "Step Over" verwendet, bis wir erneut die Adresse 0x0040105E erreicht haben, an der die Instruktion "STOSB" (AA) ausgeführt wurde. STOSB speichert ein Byte aus dem Register AL in eine bestimmte Speicheradresse.
+4. Wir haben weiterhin den Befehl "Step Over" verwendet, bis wir erneut die Adresse 0x0040105E erreicht haben, an der die Instruktion "STOSB" (AA) ausgeführt wurde. STOSB speichert ein Byte aus dem Register AL in eine bestimmte Speicheradresse.
 
 Die Adresse 0x0040105E befindet sich innerhalb einer Schleife, die wie folgt aufgebaut ist:
 
