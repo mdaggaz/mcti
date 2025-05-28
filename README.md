@@ -172,5 +172,7 @@ Wir haben dann das Tool ndisasm verwendet, um diesen Binärcode zu disassemblier
 ```
 
 Die Instruktion MOV EAX, FS:[0x30], die wir bei Adresse 0x00000017 gefunden haben, zeigt, dass der Shellcode versucht, auf den Process Environment Block, also den PEB, zuzugreifen.
+
 Das ist bei vielen Shellcodes ganz typisch – sie holen sich damit Infos über den Prozess, zum Beispiel wo genau die wichtigen DLLs wie kernel32.dll im Speicher liegen.
+
 Danach werden Funktionen wie LoadLibrary oder GetProcAddress verwendet, um weitere Funktionen zu laden. So kann der Shellcode seine eigentliche Payload nach und nach ausführen – also genau das, was man bei einem staged Shellcode erwartet.
