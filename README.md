@@ -1,4 +1,4 @@
-## 1.Dateityp-Identifikation
+## 1. Dateityp-Identifikation
 
 Wir haben den Befehl `file SurveyOnObama.bin` im Terminal unter Ubuntu Subsystem ausgeführt. Die Ausgabe war:
 
