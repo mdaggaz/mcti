@@ -350,7 +350,7 @@ Um eine dynamische Analyse mit `x32dbg` durchzuführen, müssen wir den Shellcod
 Nachdem wir das Skript heruntergeladen haben, führen wir den folgenden Befehl aus:
 
 ```bash
-python shcode2exe.py -o sc_full.exe shellcode.bin
+python shcode2exe.py -o full_sc.exe shellcode.bin
 ```
 
-=> Dies erzeugt eine Datei namens `sc_full.exe`, die wir nun mit Debugging-Tools wie `x32dbg` weiter untersuchen können.
+=> Dies erzeugt eine Datei namens `full_sc.exe`, die wir nun mit Debugging-Tools wie `x32dbg` weiter untersuchen können.
