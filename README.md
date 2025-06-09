@@ -1,4 +1,4 @@
-# SurveyOnObama.bin Dateianalyse.md
+# SurveyOnObama.bin Dateianalyse
 
 ## 1. Dateityp-Identifikation
 
