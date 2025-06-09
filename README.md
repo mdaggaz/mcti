@@ -357,6 +357,8 @@ python shcode2exe.py -o full_sc.exe shellcode.bin
 
 => Dies erzeugt eine Datei namens `full_sc.exe`, die wir nun mit Debugging-Tools wie `x32dbg` weiter untersuchen können.
 
+
+
 # Dynamische Analyse mit x32dbg
 
 ## 1. Vorbereitung der Ausführung – EIP setzen
