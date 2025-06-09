@@ -151,6 +151,7 @@ Dieser Code implementiert eine Schleife, die:
   - von jedem Funktionsnamen den Hash berechnet,
   - diesen mit dem Ziel-Hash vergleicht,
   - bei Übereinstimmung die Adresse der passenden API speichert.
+    
 Dies ist eine gängige Technik in Malware zur Umgehung statischer Analyse und zur dynamischen Auflösung benötigter Windows-API-Funktionen.
 
 ## 5. Dateigröße ermitteln
