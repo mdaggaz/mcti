@@ -2,25 +2,25 @@
 
 ## 1. Dateityp-Identifikation
 
-Wir haben den Befehl `file SurveyOnObama.bin` im Terminal unter Ubuntu Subsystem ausgeführt. Die Ausgabe war:
+Der Befehl `file SurveyOnObama.bin` wurde im Terminal unter Ubuntu Subsystem ausgeführt. Die Ausgabe war:
 
 ```bash
 SurveyOnObama.bin: PDF document, version 1.5
 ```
 
-Das bedeutet, dass unsere Datei vom Typ **PDF** ist.
+Das bedeutet, dass die Datei vom Typ **PDF** ist.
 
 
 ## 2. Verwendung von pdf-parser.py
 
-Für die Analyse benötigen wir das Tool `pdf-parser.py`, das wir von GitHub herunterladen:
+Für die Analyse wird das Tool `pdf-parser.py` benötigt, das von GitHub heruntergeladen werden kann:
 
-🔗 https://github.com/DidierStevens/DidierStevensSuite/blob/master/pdf-parser.py
+https://github.com/DidierStevens/DidierStevensSuite/blob/master/pdf-parser.py
 
-Nachdem das Tool heruntergeladen wurde, führen wir den folgenden Befehl im Terminal aus:
+Nach dem Herunterladen des Tools wird im Terminal folgender Befehl ausgeführt:
 
 ```bash
-python3 pdf-parser.py -f -a SurveyOnObama.bin
+python pdf-parser.py -f -a SurveyOnObama.bin
 ```
 
 ### Erklärung der Optionen:
@@ -61,10 +61,10 @@ Search keywords:
 
 ## 3. Analyse von Objekt 29 (JavaScript-Verweis)
 
-Dann haben wir uns Objekt 29 genauer angeschaut, da es sich um einen möglichen JavaScript-Verweis handelt. Dazu führten wir folgenden Befehl aus:
+Anschließend wurde Objekt 29 näher betrachtet, da es sich um einen möglichen JavaScript-Verweis handelt. Zur Analyse wurde folgender Befehl ausgeführt:
 
 ```bash
-python3 pdf-parser.py -o 29 SurveyOnObama.bin
+python pdf-parser.py -o 29 SurveyOnObama.bin
 ```
 
 ### Erklärung der Option:
@@ -100,10 +100,10 @@ obj 29 0
 
 ## 4. Analyse von Objekt 18 (Seite mit automatischer Aktion)
 
-Danach haben wir Objekt 18 untersucht, da es sich um die Seite handelt, auf der eine automatische Aktion definiert ist. Der verwendete Befehl lautet:
+Anschließend wurde Objekt 18 untersucht, da es sich um die Seite handelt, auf der eine automatische Aktion definiert ist. Der dabei verwendete Befehl lautet:
 
 ```bash
-python3 pdf-parser.py -o 18 SurveyOnObama.bin
+python pdf-parser.py -o 18 SurveyOnObama.bin
 ```
 
 Die Ausgabe war:
@@ -231,10 +231,10 @@ obj 18 0
 
 ## 5. Analyse von Objekt 31 (JavaScript-Inhalt)
 
-Anschließend haben wir die Struktur von Objekt 31 geprüft mit folgendem Befehl:
+Anschließend wurde die Struktur von Objekt 31 mit folgendem Befehl geprüft :
 
 ```bash
-python3 pdf-parser.py -o 31 SurveyOnObama.bin
+python pdf-parser.py -o 31 SurveyOnObama.bin
 ```
 
 Die Ausgabe war:
@@ -268,10 +268,10 @@ obj 31 0
 
 ## 6. Extraktion und Dekompression des JavaScript-Codes
 
-Zuletzt haben wir den eigentlichen JavaScript-Code aus Objekt 31 sichtbar gemacht und dekomprimiert mit folgendem Befehl:
+Abschließend wurde der JavaScript-Code aus Objekt 31 extrahiert und dekomprimiert. Der verwendete Befehl lautet:
 
 ```bash
-python3 pdf-parser.py -o 31 -f SurveyOnObama.bin
+python pdf-parser.py -o 31 -f SurveyOnObama.bin
 ```
 
 Die Ausgabe war:
@@ -309,7 +309,7 @@ obj 31 0
 
 ## 7. Extraktion des Shellcodes aus JavaScript
 
-Um den Shellcode zu extrahieren, schreiben wir ein Python-Skript, das die `%uXXXX`-Werte in rohe Bytes umwandelt. Das Ergebnis wird in einer Datei `shellcode_extracted.bin` gespeichert.
+Zur Extraktion des Shellcodes wird ein Python-Skript verwendet, das die `%uXXXX`-Werte in rohe Bytes umwandelt. Das Ergebnis wird in einer Datei `shellcode_extracted.bin` gespeichert.
 
 ### Dateiname: `extract_shellcode.py`
 
@@ -340,23 +340,22 @@ Nach dem Ausführen dieses Skripts mit:
 python extract_shellcode.py
 ```
 
-=> haben wir die Datei `shellcode.bin` erhalten.
+=> Dadurch wurde die Datei `shellcode.bin` erzeugt
 
 
 ## 8. Umwandlung des Shellcodes in eine ausführbare Datei
 
-Um eine dynamische Analyse mit `x32dbg` durchzuführen, müssen wir den Shellcode in eine `.exe`-Datei umwandeln. Dafür verwenden wir das Tool `shcode2exe`, das wir von GitHub herunterladen:
+Zur Durchführung einer dynamischen Analyse mit `x32dbg` muss der Shellcode in eine `.exe`-Datei umgewandelt werden. Hierfür wird das Tool `shcode2exe` verwendet, das auf GitHub verfügbar ist :
 
-🔗 https://github.com/accidentalrebel/shcode2exe/blob/master/shcode2exe.py
+ https://github.com/accidentalrebel/shcode2exe/blob/master/shcode2exe.py
 
-Nachdem wir das Skript heruntergeladen haben, führen wir den folgenden Befehl aus:
+Nach dem Herunterladen des Skripts wird folgender Befehl ausgeführt :
 
 ```bash
 python shcode2exe.py -o full_sc.exe shellcode.bin
 ```
 
-=> Dies erzeugt eine Datei namens `full_sc.exe`, die wir nun mit Debugging-Tools wie `x32dbg` weiter untersuchen können.
-
+=> Dabei wird eine Datei mit dem Namen `full_sc.exe` erzeugt, die anschließend mit Debugging-Tools (`x32dbg`) analysiert werden kann.
 
 
 # Dynamische Analyse mit x32dbg
@@ -369,26 +368,23 @@ Nach dem Laden der Datei `full_sc.exe` im Debugger landet der Initialwert des EI
 EIP = 7C91120F
 ```
 
-Diese Adresse befindet sich im Bereich der `ntdll.dll` und nicht im tatsächlichen Codebereich des Programms. Um die tatsächliche Ausführung des Malware-Codes zu analysieren, müssen wir den EIP manuell auf den Original-Entry-Point des Programms setzen:
-
+Diese Adresse liegt im Speicherbereich der `ntdll.dll` und nicht im eigentlichen Codeabschnitt des Programms. Zur Analyse der tatsächlichen Ausführung des Malware-Codes wird der EIP manuell auf den Original-Entry-Point gesetzt :
 ```
 EIP → 00401000
 ```
 
 ### 1.1 Speicherrechte setzen
 
-Bevor wir den Code unter `00401000` ausführen, müssen wir sicherstellen, dass dieser Speicherbereich die richtigen Zugriffsrechte hat. Dafür setzen wir die Speicherrechte wie folgt:
-
+Vor der Ausführung des Codes an Adresse `00401000` ist sicherzustellen, dass der entsprechende Speicherbereich über die erforderlichen Zugriffsrechte verfügt. Die Rechte werden wie folgt gesetzt:
 ```
 → Rechtsklick im Memory Map (00401000) → Set Page Memory Rights → Full Access (R/W/X)
 ```
 
-Dadurch erlauben wir das Lesen, Schreiben und Ausführen des Codes im angegebenen Speicherbereich.
+Dies ermöglicht das Lesen, Schreiben und Ausführen des Codes im angegebenen Speicherbereich.
 
 ## 2. Parameter vorbereiten
 
-Nachdem wir den EIP auf `00401000` gesetzt haben, führen wir den Code schrittweise mit **Step Over (F8)** aus, bis wir folgende Anweisungen erreichen:
-
+Nach dem Setzen des EIP auf `00401000` wird der Code schrittweise mit **Step Over (F8)** ausgeführt, bis die folgenden Anweisungen erreicht werden
 ```
 00401020 | 6A 00              | push 0
 00401022 | 68 80000000        | push 80
@@ -440,7 +436,7 @@ Nach dem Aufruf kehrt die Ausführung zum folgenden Code zurück, wo eine Dekodi
 
 ### 3.1 Wichtiger Hinweis zur Schleife
 
-Die Schleife zwischen `0040104C` und `00401060` dekodiert den Payload-Teil des Malware-Samples. Um eine manuelle Ausführung der langen Schleife zu vermeiden, setzen wir **einen Breakpoint auf Adresse `00401068`**, direkt nach dem `call 00401048`:
+Die Schleife im Bereich zwischen `0040104C` und `00401060` dient der Dekodierung des Payloads. Um eine manuelle Ausführung dieser Schleife zu vermeiden, wird **ein Breakpoint an Adresse `00401068`** gesetzt – unmittelbar nach dem `call 00401048` :
 
 ```
 00401068 | 55              | push ebp
@@ -505,7 +501,7 @@ Nach erfolgreicher Entschlüsselung folgt ein Abschnitt, der die Adressen von wi
 004010E1 | 59                       | pop ecx
 004010E2 | E2 B5                    | loop full_sc.401099
 ```
-### Erklärung 
+ 
 Dieser Code implementiert eine Schleife, die:
   - über einen Speicherbereich iteriert, der Hashes von Ziel-API-Namen enthält,
   - die exportierten Funktionen einer geladenen DLL durchläuft,
@@ -513,8 +509,6 @@ Dieser Code implementiert eine Schleife, die:
   - diesen mit dem Ziel-Hash vergleicht,
   - bei Übereinstimmung die Adresse der passenden API speichert.
     
-Dies ist eine gängige Technik in Malware zur Umgehung statischer Analyse und zur dynamischen Auflösung benötigter Windows-API-Funktionen.
-
 ## 5. Dateigröße ermitteln
 
 Nach der dynamischen Auflösung der APIs wird im nächsten Schritt die Funktion `GetFileSize` indirekt über einen Funktionszeiger aufgerufen. Die relevante Code-Sektion beginnt ab Adresse `004010E4`:
@@ -540,3 +534,95 @@ DWORD GetFileSize(
 ```
 Die Analyse per Step Over (F8) zeigt, dass der Malware-Code mehrere Versuche durchführt, um eine gültige Dateigröße zu ermitteln. Bei insgesamt 7 Ausführungen der Instruktion 004010F9, wurde der Rückgabewert EAX einmal 0x00000000, dann 0xFFFFFFFF, und schließlich ein stabiler Wert EAX = 0x000120A9 festgestellt, was einer Dateigröße von 73897 Bytes entspricht.
 Diese Datei ist vermutlich der verschlüsselte Payload (sc.pdf) und dient als Grundlage für die nächsten Verarbeitungsschritte.
+
+## 6. Speicherreservierung mit VirtualAlloc
+
+Direkt im Anschluss wird folgender Code ausgeführt:
+
+```
+00401110 | 6A 40              | push 40
+00401112 | 68 00100000        | push 1000
+00401117 | 8B55 F4            | mov edx,dword ptr ss:[ebp-C]
+0040111A | 52                 | push edx
+0040111B | 6A 00              | push 0
+0040111D | 8B45 FC            | mov eax,dword ptr ss:[ebp-4]
+00401120 | FF50 34            | call dword ptr ds:[eax+34]
+```
+
+Dies entspricht einem indirekten Aufruf der Windows-API `VirtualAlloc` mit den folgenden Parametern:
+
+```c
+LPVOID VirtualAlloc(
+  LPVOID lpAddress,             // = NULL (vom System zugewiesen)
+  SIZE_T dwSize,                // = Dateigröße (GetFileSize Ergebnis)
+  DWORD  flAllocationType,      // = 0x1000 → MEM_COMMIT
+  DWORD  flProtect              // = 0x40   → PAGE_EXECUTE_READWRITE
+);
+```
+
+Die Malware reserviert damit einen ausführbaren Speicherbereich im Prozess mit derselben Größe wie die gelesene Datei `sc.pdf`. Dies deutet klar auf eine Vorbereitung zur späteren Ausführung eines Payloads hin.
+
+## 7. Zurücksetzen des Dateizeigers mit SetFilePointer
+
+Unmittelbar nach der Speicherreservierung folgt dieser Code:
+
+```
+00401123 | 8945 F8                  | mov dword ptr ss:[ebp-8],eax
+00401126 | 6A 00                    | push 0
+00401128 | 6A 00                    | push 0
+0040112A | 6A 00                    | push 0
+0040112C | 8B4D E4                  | mov ecx,dword ptr ss:[ebp-1C]
+0040112F | 51                       | push ecx
+00401130 | 8B55 FC                  | mov edx,dword ptr ss:[ebp-4]
+00401133 | FF52 30                  | call dword ptr ds:[edx+30]  ; SetFilePointer
+```
+
+Dies entspricht einem indirekten Aufruf der Windows-API `SetFilePointer` mit den folgenden Parametern:
+
+```c
+DWORD SetFilePointer(
+  HANDLE hFile,                // [ebp-1C]
+  LONG   lDistanceToMove,      // 0
+  PLONG  lpDistanceToMoveHigh, // NULL
+  DWORD  dwMoveMethod          // FILE_BEGIN (0)
+);
+```
+
+Der Funktionsaufruf setzt den Dateizeiger wieder auf den Anfang der Datei. Dies ist notwendig, um im nächsten Schritt die Datei (`sc.pdf`) erneut vollständig zu lesen, diesmal nicht zur Größenbestimmung, sondern zur tatsächlichen Speicherung im vorher allokierten Speicherbereich.
+
+## 8. Dateiinhalt mit ReadFile in Speicher kopieren
+
+Direkt im Anschluss wird der folgende Code ausgeführt:
+
+```
+00401136 | 6A 00              | push 0
+00401138 | 8D45 E8            | lea eax,dword ptr ss:[ebp-18]
+0040113B | 50                 | push eax
+0040113C | 8B4D F4            | mov ecx,dword ptr ss:[ebp-C]
+0040113F | 51                 | push ecx
+00401140 | 8B55 F8            | mov edx,dword ptr ss:[ebp-8]
+00401143 | 52                 | push edx
+00401144 | 8B45 E4            | mov eax,dword ptr ss:[ebp-1C]
+00401147 | 50                 | push eax
+00401148 | 8B4D FC            | mov ecx,dword ptr ss:[ebp-4]
+0040114B | FF51 2C            | call dword ptr ds:[ecx+2C]  ; ReadFile
+```
+
+Dies entspricht einem indirekten Aufruf der Windows-API `ReadFile` mit den folgenden Parametern:
+
+```c
+BOOL ReadFile(
+  HANDLE       hFile,                  // = [ebp-1C]
+  LPVOID       lpBuffer,               // = [ebp-8] (Zielpuffer → VirtualAlloc)
+  DWORD        nNumberOfBytesToRead,   // = [ebp-C] (Dateigröße)
+  LPDWORD      lpNumberOfBytesRead,    // = [ebp-18] (Variable zur Speicherung)
+  LPOVERLAPPED lpOverlapped            // = NULL
+);
+```
+
+Dieser Aufruf liest den gesamten Inhalt der Datei `sc.pdf` und speichert ihn in der zuvor allokierten, ausführbaren Speicherregion.
+
+Dies ist ein klassischer Schritt beim Laden eines Payloads oder Shellcodes, um:
+
+- den Code aus einer Datei in den Speicher zu bringen,
+- ihn dort bereit zur Ausführung zu halten,
