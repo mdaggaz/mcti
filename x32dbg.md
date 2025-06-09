@@ -1,6 +1,6 @@
-# Dynamische Analyse eines Malware-Samples mit x32dbg
+# Dynamische Analyse mit x32dbg
 
-## 1. Erste Schritte in x32dbg
+## 1. Vorbereitung der Ausführung – EIP setzen
 
 Nach dem Laden der Datei `full_sc.exe` im Debugger landet der Initialwert des EIP-Registers auf folgender Adresse:
 
